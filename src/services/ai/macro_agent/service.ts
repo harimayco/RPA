@@ -352,7 +352,7 @@ export class MacroAgentService {
     }
 
     // provider/model switch invalidates the stored history format
-    const key = `${providerConfig.provider}|${providerConfig.model}|${providerConfig.baseURL}`
+    const key = `${providerConfig.provider}|${providerConfig.model}|${providerConfig.baseURL}|${providerConfig.apiKey}`
     if (key !== this.samplingKey) {
       this.messages = []
       this.samplingKey = key

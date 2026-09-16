@@ -152,7 +152,7 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
       case 'openrouter':
         return 'openRouterAPIKey'
       case 'local':
-        return null // local endpoints usually need no key
+        return 'localAPIKey'
       case 'uivision':
         // The FREE tier has no key entry at all — it authenticates with a
         // generated install ID. Only PRO shows a field.
@@ -232,7 +232,9 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
       const proKey = this.hasProKey() ? getProKey(this.props.config) : ''
       const apiKey = isUIVision
         ? proKey || (await getInstallId())
-        : isLocal ? '' : normalizeApiKey(this.props.config.openRouterAPIKey || '')
+        : isLocal
+          ? normalizeApiKey(this.props.config.localAPIKey || '')
+          : normalizeApiKey(this.props.config.openRouterAPIKey || '')
 
       if (provider === 'openrouter' && !apiKey) {
         message.error('Please enter and save your OpenRouter API key first.')
@@ -313,7 +315,7 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
               { value: 'uivision-pro', label: 'Ui.Vision AI PRO (Beta) - 10x the free limit' },
               { value: 'anthropic', label: 'Anthropic Claude — best overall results' },
               { value: 'openrouter', label: 'OpenRouter — many models, one key' },
-              { value: 'local', label: 'Local — OpenAI-compatible (e.g. Ollama), no key' }
+              { value: 'local', label: 'Local — OpenAI-compatible (e.g. Ollama)' }
             ]}
           />
         </div>
@@ -331,7 +333,9 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
                   ? '••••••••  (enter a new key to replace it)'
                   : isPro
                     ? 'Paste your PRO key'
-                    : 'Enter API key'
+                    : provider === 'local'
+                      ? 'Enter API key (optional)'
+                      : 'Enter API key'
               }
               value={this.state.apiKeyInput}
               onChange={(e) => {
@@ -341,6 +345,17 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
             <Button type="primary" disabled={!this.state.apiKeyInput} onClick={this.saveApiKey}>
               Save
             </Button>
+            {hasSavedKey && (
+              <Button
+                style={{ marginLeft: '8px' }}
+                onClick={() => {
+                  this.props.updateConfig({ [apiKeyConfigName]: '' })
+                  message.success('API key cleared')
+                }}
+              >
+                Clear
+              </Button>
+            )}
             {isPro && (
               <a href="https://go.ui.vision/?help=apiprogetkey" target="_blank" style={{ marginLeft: '10px', whiteSpace: 'nowrap' }}>
                 Get a PRO key

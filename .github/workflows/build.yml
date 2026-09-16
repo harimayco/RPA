@@ -1,0 +1,44 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Chrome Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Build Chrome Extension
+        run: npm run build
+
+      - name: Upload Unpacked Extension
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-dist
+          path: dist/
+          retention-days: 30
+
+      - name: Upload Extension Zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-zip
+          path: chrome_ext.zip
+          retention-days: 30
+          if-no-files-found: warn

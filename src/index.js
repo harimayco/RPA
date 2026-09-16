@@ -282,6 +282,7 @@ const restoreConfig = () => {
         useDarkTheme: false,
         sidePanelOnLeft: false,
         anthropicAPIKey: '',
+        localAPIKey: '',
         aiComputerUseMaxLoops: 50,
         // custom system prompt for the sidebar AI chat (macro assistant);
         // empty = use the built-in default from macro_agent/service.ts

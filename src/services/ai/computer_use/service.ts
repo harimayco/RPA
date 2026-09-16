@@ -79,7 +79,7 @@ export const getAIProviderConfig = (): AIProviderConfig => {
     case 'local':
       return {
         provider,
-        apiKey: '',
+        apiKey: normalizeApiKey(config.localAPIKey || ''),
         baseURL: config.localAIBaseURL || C.OPENAI_COMPAT.DEFAULT_LOCAL_BASE_URL,
         model: config.localAIModel || '',
         label: 'Local AI'
@@ -177,7 +177,7 @@ export class ComputerUseService {
 
     this.messages = []
     this.currentLoop = 0
-    this.samplingKey = `${providerConfig.provider}|${providerConfig.model}|${providerConfig.baseURL}`
+    this.samplingKey = `${providerConfig.provider}|${providerConfig.model}|${providerConfig.baseURL}|${providerConfig.apiKey}`
 
     if (providerConfig.provider === 'anthropic') {
       const samplingProps: SamplingParams = {
@@ -207,7 +207,7 @@ export class ComputerUseService {
 
   private getSampling = (): ISamplingEngine => {
     const providerConfig = getAIProviderConfig()
-    const key = `${providerConfig.provider}|${providerConfig.model}|${providerConfig.baseURL}`
+    const key = `${providerConfig.provider}|${providerConfig.model}|${providerConfig.baseURL}|${providerConfig.apiKey}`
 
     if (!this.sampling || key !== this.samplingKey) {
       this.createNewSampling()
