@@ -35,7 +35,7 @@ module.exports = {
     csv_editor:       './src/csv_editor.js',
     vision_editor:    './src/vision_editor/index.tsx',
     desktop_screenshot_editor: './src/desktop_screenshot_editor/index.tsx',
-    options:          './src/options.ts',
+    options:          './src/settings/index.tsx',
     content_script:   './src/ext/content_script/index.js',
     inject:           './src/ext/inject.js',
     bg:               './src/ext/bg.js'
@@ -127,7 +127,8 @@ module.exports = {
     fallback: {
       buffer: require.resolve('buffer'),
       stream: require.resolve('stream-browserify'),
-      'process/browser': require.resolve('process/browser')
+      'process/browser': require.resolve('process/browser'),
+      vm: false
     }
   },
   plugins: [
