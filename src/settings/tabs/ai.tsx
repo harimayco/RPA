@@ -30,6 +30,7 @@ import {
 } from '@/services/ai/uivision_free_tier'
 import { testMcpBridge } from '@/services/mcp_bridge'
 import { normalizeApiKey } from '@/services/ai/computer_use/service'
+import { parseChatCompletionResponse } from '@/common/uiv_link'
 
 // One-line installer for the MCP bridge (shown with a Copy button in the
 // bridge settings). `--setup` writes the server entry into every MCP client
@@ -245,7 +246,10 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
         return
       }
 
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
       if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
       if (!isLocal) headers['X-Title'] = 'Ui.Vision RPA'
       // device id — our proxy only; on PRO the Bearer header is the account key
@@ -257,7 +261,8 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
         body: JSON.stringify({
           model,
           messages: [{ role: 'user', content: this.state.prompt }],
-          max_tokens: 300
+          max_tokens: 300,
+          stream: false
         })
       })
 
@@ -266,7 +271,7 @@ class AITab extends React.Component<AiTabProps, AiTabAppState> {
         throw new Error(`HTTP ${res.status}: ${body.slice(0, 300)}`)
       }
 
-      const data = await res.json()
+      const data = await parseChatCompletionResponse(res)
       const text = data?.choices?.[0]?.message?.content
       if (!text) throw new Error(`Empty response: ${JSON.stringify(data).slice(0, 300)}`)
 

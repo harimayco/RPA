@@ -7,7 +7,7 @@ import { toJSONString } from '@/common/convert_utils'
 import { isFirefox } from '@/common/dom_utils'
 import { STARTER_SCRIPT } from '@/config/preinstall_js_scripts'
 import { delayMs } from '@/common/utils'
-import { chatCompletionsUrl } from '@/common/uiv_link'
+import { chatCompletionsUrl, parseChatCompletionResponse } from '@/common/uiv_link'
 import { getXUserIO } from '@/services/xmodules/x_user_io'
 import { isXModuleOcrAvailable } from '@/modules/ocr'
 import { NO_ANTHROPIC_API_KEY_ERROR } from '../anthropic'
@@ -521,7 +521,10 @@ export class MacroAgentService {
       // placeholder model name into the chat)
       this.params.logMessage(providerLabel.startsWith('Ui.Vision AI') ? `Calling API (${providerLabel})` : `Calling API (${providerLabel} ${model})`, 'status')
 
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
       if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`
       headers['X-Title'] = 'Ui.Vision RPA'
       // device id — our proxy only; on PRO the Bearer header is the account key
@@ -538,7 +541,8 @@ export class MacroAgentService {
         messages: this.messages,
         tools,
         max_tokens: 4096,
-        temperature: 0
+        temperature: 0,
+        stream: false
       }
       if (/openrouter\.ai/i.test(baseURL)) requestBody.reasoning = { enabled: false }
 
@@ -553,7 +557,7 @@ export class MacroAgentService {
         throw new Error(`HTTP ${res.status}: ${body.slice(0, 400)}`)
       }
 
-      const data = await res.json()
+      const data = await parseChatCompletionResponse(res)
       const message = data?.choices?.[0]?.message
       if (!message) {
         throw new Error(`Empty response from model: ${JSON.stringify(data).slice(0, 400)}`)

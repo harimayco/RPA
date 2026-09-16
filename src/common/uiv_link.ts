@@ -67,3 +67,101 @@ export function installGoUivLinkDecorator (): void {
     true
   )
 }
+
+/**
+ * Safely parses chat completion response, handling both standard JSON responses
+ * and Server-Sent Events (SSE) streaming format (data: {...}) when servers or proxies
+ * stream responses despite stream: false.
+ */
+export async function parseChatCompletionResponse (res: Response): Promise<any> {
+  const text = await res.text()
+  const trimmed = text.trim()
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      return JSON.parse(trimmed)
+    } catch (e) {
+      // Fall through to SSE / raw handling if parse fails
+    }
+  }
+
+  if (trimmed.includes('data:')) {
+    const lines = text.split(/\r?\n/)
+    let combinedContent = ''
+    const toolCallsMap: Record<number, any> = {}
+    let lastModel = ''
+    let lastId = ''
+    let usage: any = null
+    let singleMessage: any = null
+
+    for (const line of lines) {
+      const lineTrim = line.trim()
+      if (!lineTrim.startsWith('data:')) continue
+      const dataStr = lineTrim.slice(5).trim()
+      if (!dataStr || dataStr === '[DONE]') continue
+
+      try {
+        const parsed = JSON.parse(dataStr)
+        if (parsed.id) lastId = parsed.id
+        if (parsed.model) lastModel = parsed.model
+        if (parsed.usage) usage = parsed.usage
+
+        const choice = parsed.choices?.[0]
+        if (!choice) continue
+
+        if (choice.message) {
+          singleMessage = choice.message
+          continue
+        }
+
+        const delta = choice.delta
+        if (!delta) continue
+
+        if (typeof delta.content === 'string') {
+          combinedContent += delta.content
+        }
+
+        if (Array.isArray(delta.tool_calls)) {
+          for (const tc of delta.tool_calls) {
+            const idx = typeof tc.index === 'number' ? tc.index : 0
+            if (!toolCallsMap[idx]) {
+              toolCallsMap[idx] = {
+                id: tc.id || `call_${idx}`,
+                type: tc.type || 'function',
+                function: {
+                  name: tc.function?.name || '',
+                  arguments: tc.function?.arguments || ''
+                }
+              }
+            } else {
+              if (tc.id) toolCallsMap[idx].id = tc.id
+              if (tc.type) toolCallsMap[idx].type = tc.type
+              if (tc.function?.name) toolCallsMap[idx].function.name += tc.function.name
+              if (tc.function?.arguments) toolCallsMap[idx].function.arguments += tc.function.arguments
+            }
+          }
+        }
+      } catch (err) {
+        // ignore unparseable chunk
+      }
+    }
+
+    const toolCalls = Object.values(toolCallsMap)
+    return {
+      id: lastId,
+      model: lastModel,
+      usage,
+      choices: [
+        {
+          message: singleMessage || {
+            role: 'assistant',
+            content: combinedContent || null,
+            ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {})
+          }
+        }
+      ]
+    }
+  }
+
+  return JSON.parse(text)
+}

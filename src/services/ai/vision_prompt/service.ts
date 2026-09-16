@@ -1,5 +1,5 @@
 import { getAIProviderConfig } from '@/services/ai/computer_use/service'
-import { chatCompletionsUrl } from '@/common/uiv_link'
+import { chatCompletionsUrl, parseChatCompletionResponse } from '@/common/uiv_link'
 import { uivInstallHeader } from '@/services/ai/uivision_free_tier'
 import { CoordSpace, coordSpaceForModel } from '@/services/ai/openai_compatible/sampling'
 
@@ -93,7 +93,8 @@ export async function askOpenAICompatible (
   const body: any = {
     model: providerConfig.model,
     max_tokens: 1024,
-    messages: [{ role: 'user', content }]
+    messages: [{ role: 'user', content }],
+    stream: false
   }
   // Reasoning models burn "thinking" tokens against max_tokens and then return
   // an EMPTY answer at 1024 (measured with qwen3.7-flash, 2026-08: every ai.find
@@ -106,6 +107,7 @@ export async function askOpenAICompatible (
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
       ...(providerConfig.apiKey ? { Authorization: `Bearer ${providerConfig.apiKey}` } : {}),
       // WHICH CALL this is, named as the JS API names it: ai.ask, ai.find,
       // ai.computerUse, aichat. The four want very different things — pointing
@@ -129,7 +131,7 @@ export async function askOpenAICompatible (
   }
 
   const headerSpace = res.headers.get('x-coord-space')
-  const json: any = await res.json()
+  const json: any = await parseChatCompletionResponse(res)
   const text = json && json.choices && json.choices[0] && json.choices[0].message
     ? json.choices[0].message.content
     : ''

@@ -2,7 +2,7 @@ import ComputerUse from '../computer_use/computer_use'
 import { ComputerUseMessageType } from '../computer_use/model'
 import { SamplingError } from '../computer_use/sampling'
 import { OPENAI_COMPAT } from '@/common/constant'
-import { chatCompletionsUrl } from '@/common/uiv_link'
+import { chatCompletionsUrl, parseChatCompletionResponse } from '@/common/uiv_link'
 import { uivInstallHeader } from '../uivision_free_tier'
 
 // Agent sampling loop for OpenAI-compatible chat-completions endpoints
@@ -132,7 +132,10 @@ class OpenAICompatSampling implements ISamplingEngine {
   }
 
   private async callAPI(messages: any[]): Promise<any> {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    }
     if (this.apiKey) headers['Authorization'] = `Bearer ${this.apiKey}`
     headers['X-Title'] = 'Ui.Vision RPA'
     headers['X-UIV-Task'] = this.params.task || 'ai.computerUse'
@@ -150,7 +153,8 @@ class OpenAICompatSampling implements ISamplingEngine {
       messages,
       tools: [COMPUTER_TOOL],
       max_tokens: 4096,
-      temperature: 0
+      temperature: 0,
+      stream: false
     }
     if (/openrouter\.ai/i.test(this.params.baseURL)) body.reasoning = { enabled: false }
 
@@ -168,7 +172,7 @@ class OpenAICompatSampling implements ISamplingEngine {
     const coordSpace = res.headers.get('x-coord-space')
     if (coordSpace === 'normalized-1000' || coordSpace === 'absolute') this.coordSpaceOverride = coordSpace
 
-    const data = await res.json()
+    const data = await parseChatCompletionResponse(res)
     if (typeof data?.model === 'string' && data.model) this.upstreamModel = data.model
     const message = data?.choices?.[0]?.message
     if (!message) {
